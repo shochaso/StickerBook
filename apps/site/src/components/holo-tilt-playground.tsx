@@ -63,8 +63,9 @@ function useDeviceOrientation(
       if (cancelled) return;
       const gamma = event.gamma ?? 0; // left/right
       const beta = event.beta ?? 0; // front/back
-      const x = clamp(gamma / 45, -0.7, 0.7);
-      const y = clamp(beta / 45, -0.7, 0.7);
+      // 感度を3倍に強化（45 → 15）、範囲も拡大（0.7 → 0.85）
+      const x = clamp(gamma / 15, -0.85, 0.85);
+      const y = clamp(beta / 15, -0.85, 0.85);
       onChange(x, y);
     };
 

@@ -7,6 +7,7 @@ import { Slider } from './ui/slider';
 import { Badge } from './ui/badge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { deskewAndCrop, DeskewMode } from '@sticker/core';
+import { Squishy } from '@sticker/ui';
 
 interface ImageEditPageProps {
   onBack: () => void;
@@ -255,12 +256,8 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
                 alt="撮影したシール帳"
                 className="w-auto max-w-full h-80 object-contain"
                 style={{
-                  transform: correctedImage
-                    ? `rotate(${rotation}deg)` // 補正済みなら追加回転のみ
-                    : `rotate(${autoAngleCorrection ? rotation - 5 : rotation}deg)`, // 未補正なら従来通り
-                  clipPath: correctedImage ? 'none' : // 補正済みは既にクロップ済み
-                    pageMode === 'left' ? 'inset(0 50% 0 0)' :
-                    pageMode === 'right' ? 'inset(0 0 0 50%)' : 'none'
+                  transform: `rotate(${rotation}deg)`, // 回転のみ（自動補正は画像データに既に適用済み）
+                  clipPath: 'none' // 自動補正でクロップ済みなのでclipPath不要
                 }}
               />
               
@@ -283,18 +280,32 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
               )}
             </div>
             
-            {/* 検出されたシールのオーバーレイ */}
+            {/* 検出されたシールのオーバーレイ（プニプニ効果付き） */}
             {showStickers && (
-              <div className="absolute inset-0">
+              <div className="absolute inset-0 pointer-events-none">
                 {detectedStickers.map((sticker) => (
                   <div
                     key={sticker.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
                     style={{ left: `${sticker.x}%`, top: `${sticker.y}%` }}
                   >
-                    <div className="bg-purple-500/80 backdrop-blur-sm rounded-full p-2 border-2 border-white">
-                      <Sparkles className="h-3 w-3 text-white" />
-                    </div>
+                    <Squishy>
+                      <div className="relative group cursor-pointer">
+                        {/* シールアイコン（プニプニ可能） */}
+                        <div className="bg-gradient-to-br from-purple-400 to-pink-400 backdrop-blur-sm rounded-2xl p-3 border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl">
+                          <Sparkles className="h-4 w-4 text-white" />
+                        </div>
+                        {/* ホバー時のシール名表示 */}
+                        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-medium text-purple-900 dark:text-purple-100 whitespace-nowrap shadow-md">
+                            {sticker.name}
+                            <div className="text-[10px] text-gray-600 dark:text-gray-400">
+                              {sticker.category} · {Math.round(sticker.confidence * 100)}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Squishy>
                   </div>
                 ))}
               </div>
