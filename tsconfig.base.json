@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2021", "DOM"],
+    "moduleResolution": "Node",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sticker/theme": ["packages/theme/src"],
+      "@sticker/theme/*": ["packages/theme/src/*"],
+      "@sticker/ui": ["packages/ui/src"],
+      "@sticker/ui/*": ["packages/ui/src/*"],
+      "@sticker/core": ["packages/core/src"],
+      "@sticker/core/*": ["packages/core/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
