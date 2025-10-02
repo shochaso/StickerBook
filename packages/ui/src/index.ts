@@ -3,3 +3,4 @@ export * from "./Gloss";
 export * from "./Tilt";
 export * from "./StickerCard";
 export * from "./Sparkle";
+export * from "./Sticker3D";

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { ArrowLeft, RotateCw, Crop, Sparkles, Save, Camera, Eye, EyeOff, Zap, Star, Split, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, RotateCw, Crop, Sparkles, Save, Camera, Eye, EyeOff, Zap, Star, Split, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 import { Badge } from './ui/badge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { deskewAndCrop, DeskewMode } from '@sticker/core';
 
 interface ImageEditPageProps {
   onBack: () => void;
@@ -21,6 +22,10 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
   const [showStickers, setShowStickers] = useState(true);
   const [pageMode, setPageMode] = useState<'full' | 'left' | 'right'>('full');
   const [autoAngleCorrection, setAutoAngleCorrection] = useState(true);
+  const [deskewing, setDeskewing] = useState(false);
+  const [deskewFailed, setDeskewFailed] = useState(false);
+  const [correctedImage, setCorrectedImage] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState(0);
   const [detectedStickers] = useState([
     { id: 1, name: 'パンダ', x: 45, y: 35, confidence: 0.95, category: 'アニマル' },
     { id: 2, name: 'ゾウ', x: 25, y: 55, confidence: 0.92, category: 'アニマル' },
@@ -28,6 +33,71 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
     { id: 4, name: '星', x: 75, y: 15, confidence: 0.91, category: 'シェイプ' },
     { id: 5, name: 'うめがた', x: 65, y: 45, confidence: 0.85, category: 'キャラクター' },
   ]);
+
+  // 自動角度補正
+  useEffect(() => {
+    if (!autoAngleCorrection || !capturedImage || deskewing) return;
+
+    const runDeskew = async () => {
+      setDeskewing(true);
+      setDeskewFailed(false);
+
+      try {
+        // OpenCV.js のロード確認
+        if (typeof window === 'undefined' || !window.cv) {
+          console.warn('OpenCV.js not loaded, skipping auto-correction');
+          setDeskewFailed(true);
+          setDeskewing(false);
+          return;
+        }
+
+        // ImageDataに変換
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = capturedImage;
+
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // deskewAndCrop実行
+        const mode: DeskewMode =
+          pageMode === 'left' ? 'LEFT' : pageMode === 'right' ? 'RIGHT' : 'SPREAD';
+
+        const result = await deskewAndCrop(imageData, { mode });
+
+        if (result.confidence > 0.3) {
+          // 成功: 補正画像を適用
+          const resultCanvas = document.createElement('canvas');
+          resultCanvas.width = result.image.width;
+          resultCanvas.height = result.image.height;
+          const resultCtx = resultCanvas.getContext('2d')!;
+          resultCtx.putImageData(result.image, 0, 0);
+          const correctedDataUrl = resultCanvas.toDataURL('image/jpeg', 0.95);
+          setCorrectedImage(correctedDataUrl);
+          setConfidence(result.confidence);
+        } else {
+          // 信頼度が低い場合はフォールバック
+          setDeskewFailed(true);
+        }
+      } catch (error) {
+        console.error('Deskew error:', error);
+        setDeskewFailed(true);
+      } finally {
+        setDeskewing(false);
+      }
+    };
+
+    runDeskew();
+  }, [capturedImage, pageMode, autoAngleCorrection]);
 
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360);
@@ -107,6 +177,34 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
             </div>
           </div>
 
+          {/* 自動補正状態 */}
+          {autoAngleCorrection && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wand2 className={`h-4 w-4 ${deskewing ? 'animate-spin text-purple-600' : 'text-purple-500'}`} />
+                  <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                    {deskewing
+                      ? '自動補正中...'
+                      : deskewFailed
+                      ? '補正失敗（手動調整してください）'
+                      : correctedImage
+                      ? `補正完了 (信頼度: ${Math.round(confidence * 100)}%)`
+                      : '自動補正ON'}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAutoAngleCorrection(false)}
+                  className="text-xs"
+                >
+                  OFF
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 見開きページ選択 */}
           <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
             <div className="flex items-center gap-2 mb-3">
@@ -149,13 +247,20 @@ export function ImageEditPage({ onBack, onSave, capturedImage }: ImageEditPagePr
           <div className="relative bg-gray-100 dark:bg-gray-700 rounded-2xl overflow-hidden flex justify-center">
             <div className="relative">
               <ImageWithFallback
-                src={capturedImage || "https://images.unsplash.com/photo-1623423299949-6b4f92507ea6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGlja2VyJTIwYWxidW0lMjBub3RlYm9vayUyMHNjcmFwYm9va3xlbnwxfHx8fDE3NTkwNzM2NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"}
+                src={
+                  correctedImage ||
+                  capturedImage ||
+                  "https://images.unsplash.com/photo-1623423299949-6b4f92507ea6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGlja2VyJTIwYWxidW0lMjBub3RlYm9vayUyMHNjcmFwYm9va3xlbnwxfHx8fDE3NTkwNzM2NjZ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+                }
                 alt="撮影したシール帳"
                 className="w-auto max-w-full h-80 object-contain"
-                style={{ 
-                  transform: `rotate(${autoAngleCorrection ? rotation - 5 : rotation}deg)`,
-                  clipPath: pageMode === 'left' ? 'inset(0 50% 0 0)' : 
-                           pageMode === 'right' ? 'inset(0 0 0 50%)' : 'none'
+                style={{
+                  transform: correctedImage
+                    ? `rotate(${rotation}deg)` // 補正済みなら追加回転のみ
+                    : `rotate(${autoAngleCorrection ? rotation - 5 : rotation}deg)`, // 未補正なら従来通り
+                  clipPath: correctedImage ? 'none' : // 補正済みは既にクロップ済み
+                    pageMode === 'left' ? 'inset(0 50% 0 0)' :
+                    pageMode === 'right' ? 'inset(0 0 0 50%)' : 'none'
                 }}
               />
               

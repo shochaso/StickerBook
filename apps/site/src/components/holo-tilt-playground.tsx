@@ -101,7 +101,7 @@ export function HoloTiltCard({
   image,
   alt = "holographic sticker",
   size = 320,
-  tiltStrength = 14,
+  tiltStrength = 18, // ポケモンカード風に拡張
   glossStrength = 0.65,
   saturation = 1.1,
   noiseStrength = 0.35,
@@ -377,9 +377,9 @@ interface HoloTiltPlaygroundProps {
 export function HoloTiltPlayground({ initialImage }: HoloTiltPlaygroundProps) {
   const [imgSrc, setImgSrc] = useState(
     initialImage ||
-      "https://images.unsplash.com/photo-1520975922284-c2c139bdf181?q=80&w=800&auto=format&fit=crop"
+    "https://images.unsplash.com/photo-1520975922284-c2c139bdf181?q=80&w=800&auto=format&fit=crop"
   );
-  const [tiltStrength, setTiltStrength] = useState(14);
+  const [tiltStrength, setTiltStrength] = useState(18); // ±18°に拡張
   const [glossStrength, setGlossStrength] = useState(0.7);
   const [saturation, setSaturation] = useState(1.1);
   const [noiseStrength, setNoiseStrength] = useState(0.35);
@@ -433,7 +433,7 @@ export function HoloTiltPlayground({ initialImage }: HoloTiltPlaygroundProps) {
   const resetImage = useCallback(() => {
     setImgSrc(
       initialImage ||
-        "https://images.unsplash.com/photo-1520975922284-c2c139bdf181?q=80&w=800&auto=format&fit=crop"
+      "https://images.unsplash.com/photo-1520975922284-c2c139bdf181?q=80&w=800&auto=format&fit=crop"
     );
   }, [initialImage]);
 
