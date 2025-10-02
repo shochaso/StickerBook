@@ -30,7 +30,7 @@ type HoloTiltCardProps = {
   size?: number;
   tiltStrength?: number;
   glossStrength?: number;
-  rainbowStrength?: number;
+  saturation?: number; // 彩度 0.6-1.6
   noiseStrength?: number;
   gyro?: boolean;
   reduceMotion?: boolean;
@@ -103,7 +103,7 @@ export function HoloTiltCard({
   size = 320,
   tiltStrength = 14,
   glossStrength = 0.65,
-  rainbowStrength = 0.4,
+  saturation = 1.1,
   noiseStrength = 0.35,
   gyro = false,
   reduceMotion = false
@@ -186,16 +186,7 @@ export function HoloTiltCard({
     }
   );
 
-  const rainbowBackground = useTransform(
-    [pointerX, pointerY, shimmer],
-    ([x, y, progress]) => {
-      const start = 180 + progress * 360 + x * 30;
-      const cx = 48 + x * 18;
-      const cy = 52 + y * 16;
-      const alpha = (0.35 + rainbowStrength * 0.9).toFixed(3);
-      return `conic-gradient(from ${start}deg at ${cx}% ${cy}%, rgba(255,0,153,0), rgba(255,255,255,${alpha}), rgba(0,255,255,0) 55%)`;
-    }
-  );
+  // Rainbow削除: 彩度はCSS filterで適用
 
   const noiseBackground = useTransform(shimmer, (progress) => {
     const offset = progress * 140;
@@ -304,7 +295,7 @@ export function HoloTiltCard({
             alt={alt}
             className="absolute inset-0 h-full w-full object-cover"
             draggable={false}
-            style={{ filter: "saturate(1.1)" }}
+            style={{ filter: `saturate(${saturation})` }}
           />
         </motion.div>
 
@@ -319,16 +310,7 @@ export function HoloTiltCard({
           }}
         />
 
-        <motion.div
-          className="absolute inset-0 pointer-events-none mix-blend-screen"
-          style={{
-            translateZ: shouldReduceMotion ? 0 : 20,
-            x: parallaxMediumX,
-            y: parallaxMediumY,
-            backgroundImage: rainbowBackground,
-            opacity: rainbowStrength
-          }}
-        />
+        {/* Rainbow層を削除 - 彩度はimg filterで適用 */}
 
         <motion.div
           className="absolute inset-0 pointer-events-none mix-blend-screen"
@@ -399,7 +381,7 @@ export function HoloTiltPlayground({ initialImage }: HoloTiltPlaygroundProps) {
   );
   const [tiltStrength, setTiltStrength] = useState(14);
   const [glossStrength, setGlossStrength] = useState(0.7);
-  const [rainbowStrength, setRainbowStrength] = useState(0.45);
+  const [saturation, setSaturation] = useState(1.1);
   const [noiseStrength, setNoiseStrength] = useState(0.35);
   const [gyro, setGyro] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -491,16 +473,16 @@ export function HoloTiltPlayground({ initialImage }: HoloTiltPlaygroundProps) {
           </label>
           <label className="flex flex-col gap-2">
             <span className="flex items-center gap-2 font-medium text-purple-900 dark:text-purple-100">
-              <Zap className="h-4 w-4" /> Rainbow
+              <Zap className="h-4 w-4" /> Saturation
             </span>
             <input
               type="range"
-              min={0}
-              max={1}
+              min={0.6}
+              max={1.6}
               step={0.05}
-              value={rainbowStrength}
+              value={saturation}
               onChange={(event) =>
-                setRainbowStrength(Number(event.target.value))
+                setSaturation(Number(event.target.value))
               }
               className="accent-purple-500"
             />
@@ -590,7 +572,7 @@ export function HoloTiltPlayground({ initialImage }: HoloTiltPlaygroundProps) {
           image={imgSrc}
           tiltStrength={tiltStrength}
           glossStrength={glossStrength}
-          rainbowStrength={rainbowStrength}
+          saturation={saturation}
           noiseStrength={noiseStrength}
           size={size}
           gyro={gyro}
